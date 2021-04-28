@@ -21,7 +21,7 @@ namespace ariel {
         bool connected(const NumberWithUnits& a, const NumberWithUnits& b);
         
             NumberWithUnits(double val, std::string type);
-            static void read_units(std::ifstream &file_name);
+            static void read_units(std::ifstream& file_name);
             //overloading operators
             NumberWithUnits operator+ (const NumberWithUnits& a );
             NumberWithUnits operator+ ();
