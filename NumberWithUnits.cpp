@@ -1,151 +1,211 @@
 #include "NumberWithUnits.hpp"
 #include <iostream>
-#include <math.h>
+using namespace ariel;
+
 using namespace std;
 namespace ariel{
     const double EPS = 0.001;
-    static map<std::string,map<std::string,double>> map;
+    static map<string, map<string, double>> con_map; 
+
     NumberWithUnits::NumberWithUnits(double val, string type){
-        // if(val != 0){
-        //     // throw {
-        //     //     invalid_argument("error, 0 isnt a real value!");
-        //     // }
-        // }
+        if ( val == 0){
+            throw "invalid value";
+        }
+        if( con_map.find(type) == con_map.end()){
+            throw "invalid unit";
+        }
         this -> val = val;
         this -> type = type;
     }
-    void NumberWithUnits::read_units(std::ifstream& file_name){
-        double num1 = 0 , num2 = 0;
-        string str1 , str2, eq;
-        while(file_name >> num1 >> str1 >> eq >> num2 >> str2){
-            map[str1][str2] = num2;
-            map[str1][str2] = 1/num2;
 
-            for(auto& [key,value]:map[str1]){
-                map[str2][key] = num1 * value;
-                map[key][str2] = 1 / (num1 * value);
-            }
-            for(auto& [key,value]:map[str2]){
-                map[str1][key] = num2 * value;
-                map[key][str1] = 1 / (num2 * value);
-            }
+
+
+    double NumberWithUnits::conversion(string first_unit, string second_unit, double value){
+        if ( first_unit == second_unit){
+            return value;
+        }
+        if (con_map[second_unit].find(first_unit) == con_map[second_unit].end()){
+            throw "cant compare diffrent types!,error";
+        }
+        double ans = (value * con_map[second_unit][first_unit]);
+        return ans;
+
+    }
+    void NumberWithUnits::multicasting(const string &str1, const string &str2){
+        for ( auto &p: con_map[str1]){
+            double cast = con_map[str2][str1] * p.second;
+            con_map[str2][str1] = cast;
+            con_map[str1][str2] = 1/cast;
+        }
+
+    }
+
+
+    void NumberWithUnits::read_units(ifstream &file_name){
+        string first, second, eq;
+        double num1=0, num2=0;
+        while(!file_name.eof()){
+            file_name >> num1 >> first >> eq >> num2 >> second;
+            con_map[first][second] = num2;
+            con_map[second][first] = num1/num2;
+            multicasting(first, second);
+            multicasting(second,first);
         }
     };
-    // unari
-    NumberWithUnits NumberWithUnits::operator+(){
-        return *this;
-    }
-    NumberWithUnits NumberWithUnits::operator-(){
-        this -> val = - this -> val;
-        return *this;
-    }
-    // add operators
-    NumberWithUnits NumberWithUnits::operator+ (const NumberWithUnits& a ){
-        if (!connected(*this,a)){
-            throw invalid_argument("cant add "+ this -> type + " and "+a.type); 
+            //overloading operators
+    NumberWithUnits NumberWithUnits::operator+ (const NumberWithUnits &a)const {
+        if ( this -> type.compare(a.type) == 0){
+            NumberWithUnits ans(this->val + a.val, this -> type);
+            return ans;
         }
-            NumberWithUnits b(this -> val + map[this -> type][a.type]*a.val, this -> type);
-            return b;
+        else{
+            throw "error";
         }
-    NumberWithUnits& NumberWithUnits::operator++(){
-        this -> val ++;
-        return *this;
     }
-    NumberWithUnits NumberWithUnits::operator++(int){
-        NumberWithUnits a(this -> val ++ , this -> type);
-        return a;
-    }
-    NumberWithUnits& operator+= (const NumberWithUnits& a){
-        if (connected(*this , a)){
-            this -> val = this -> val + map[this -> type][a.type] * a.val;
+        NumberWithUnits NumberWithUnits::operator-(const NumberWithUnits& a)const{
+                if ( this -> type.compare(a.type) == 0){
+            NumberWithUnits ans(this->val - a.val, this -> type);
+            return ans;
+        }
+        else{
+            throw "error";
+        }
+        }
+        NumberWithUnits &NumberWithUnits::operator+(){
             return *this;
         }
-        throw invalid_argument("cant add "+ this -> type + " and "+a.type);
-    }
-    // subtraction operators
-    NumberWithUnits NumberWithUnits::operator- (const NumberWithUnits& a ,const NumberWithUnits& b){
-                if (connected(a,b)){
-            NumberWithUnits c(a.val - map[a.type][b.type]*b.val, a.type);
-            return c;
-        }
-        throw invalid_argument("cant substruct "+ a.type + " and "+b.type);            
-    }
-    NumberWithUnits& operator-= (const NumberWithUnits& a){
-            NumberWithUnits n(this -> val, this -> type);
-             if (connected(n , a)){
-            this -> val = this -> val - map[this -> type][a.type] * a.val;
+        NumberWithUnits &NumberWithUnits::operator-(){
+            this -> val = this -> val * (-1);
             return *this;
         }
-        throw invalid_argument("cant substruct "+ this -> type + " and "+a.type);
-    }
+      
+        NumberWithUnits& NumberWithUnits::operator++(){
+            this -> val = this -> val +1;
+            return *this;
+        }
+        NumberWithUnits& NumberWithUnits::operator++(int n){//postfix
+              this -> val = this -> val +1;
+            return *this;
+        }
+        NumberWithUnits& NumberWithUnits::operator--(){
+             this -> val = this -> val -1;
+             return *this;
+        }
+        NumberWithUnits& NumberWithUnits::operator--(int n){//postfix
+             this -> val = this -> val -1;
+             return *this;
+        }
 
-    NumberWithUnits& NumberWithUnits::operator--(){
-        this -> val --;
-        return *this;
-    }
-        NumberWithUnits& NumberWithUnits::operator--(int){
-        NumberWithUnits a(this -> val --, this -> type);
-        return a;
-    }
-    // multiply operators
-    NumberWithUnits& operator*=(double n){
-        this -> val *= n;
-        return *this;
-    }
-     NumberWithUnits NumberWithUnits::operator* (const NumberWithUnits& a, double b){
-        NumberWithUnits temp(a.val * b, a.type); 
-        return temp;
-    }
-    NumberWithUnits NumberWithUnits::operator* (double a, const NumberWithUnits& b){
-        return b*a;
-    }
-    //boolean oprators
-    bool operator== (const NumberWithUnits& a, const NumberWithUnits& b){
-        if(connected (a,b)){
-            return (a.val == map[a.type][b.type]* b.val)
-        }
-        throw invalid_argument("error cant compare bitween diffrents unit types");
-    }
+        bool NumberWithUnits::operator== (const NumberWithUnits& a)const{
+            if (this -> type.compare(a.type) == 0 && abs(this -> val - a.val) < EPS){
+                return true;
+            }
+            return false;
 
-    bool operator!= (const NumberWithUnits& a, const NumberWithUnits& b){
-        return !(a == b);
         }
-    bool operator< (const NumberWithUnits& a, const NumberWithUnits& b){
-        if(connected(a,b)){
-            return (a.val < map[a.type][b.type] * b.val);
-        }
-        throw invalid_argument("error cant compare bitween diffrents unit types");
-    }
+        bool  NumberWithUnits::operator!= (const NumberWithUnits& a)const{
+            if (!(this -> type.compare(a.type) == 0 && abs(this -> val - a.val) < EPS)){
+                return true;
+            }
+            return false;
 
-    bool operator> (const NumberWithUnits& a, const NumberWithUnits& b){
-            if(connected(a,b)){
-            return (a.val > map[a.type][b.type] * b.val);
         }
-        throw invalid_argument("error cant compare bitween diffrents unit types");
-    }
+        
+        bool NumberWithUnits::operator<= (const NumberWithUnits& a)const{
+            if( this -> val <= a.val && (this -> type.compare(a.type) == 0)){
+                return true;
+            }
+            return false;
+        }
+        bool NumberWithUnits::operator< (const NumberWithUnits& a)const{
+                if( this -> val < a.val && (this -> type.compare(a.type) == 0)){
+                return true;
+            }
+            return false;
+        }
+        bool NumberWithUnits::operator> (const NumberWithUnits& a)const{
+            if( this -> val > a.val && (this -> type.compare(a.type) == 0)){
+                return true;
+            }
+            return false;
+        }
+        bool NumberWithUnits::operator>= (const NumberWithUnits& a)const{
+            if ( this -> val >= a.val && (this -> type.compare(a.type) == 0)){
+                return true;
+            }
+            return false;
+        }
+        NumberWithUnits operator*(const double a, const NumberWithUnits& b){
+            if (a != 0){
+                NumberWithUnits ans(b.val * a, b.type);
+                return ans;
+            }
+            else {
+                throw "you mustnt multiply by 0";
+            }
+        }
+        NumberWithUnits NumberWithUnits::operator* ( double b){
+            if (b != 0){
+                NumberWithUnits ans(this -> val*b, this -> type);
+                return ans;
+            }
+            else{  
+                throw "you mustnt multiply by 0";
+        }
+        }
 
-    bool operator<= (const NumberWithUnits& a, const NumberWithUnits& b){
-        return (a < b || a == b) ;
+
+        
+        NumberWithUnits& NumberWithUnits::operator*= (const NumberWithUnits& a){
+            if( this -> type.compare(a.type) == 0){
+                this -> val = this -> val * a.val;
+                return *this;
+            }
+            else{
+                throw "error";
+            }
         }
-    
-    bool operator>= (const NumberWithUnits& a, const NumberWithUnits& b){
-        return  (a > b || a == b) ;}
-    
-    // input & output operators
-    ostream& operator<< (ostream& os, const NumberWithUnits& a){
-        os << a.val << '[' << a.type << ']'; 
-        return os;
-    }
-    istream& operator>> (istream& is, NumberWithUnits& a){
-        char s ;
-        is >> a.val >> s >> a.type;
-        return is;
-    }
-    bool NumberWithUnits::connected(const NumberWithUnits& a, const NumberWithUnits& b){
-        if(map.find(a.type) != map.end() && map[a.type].find(b.type != map[a.type].end()){
-            return true;
+        NumberWithUnits& NumberWithUnits::operator-= (const NumberWithUnits& a){
+            if( this -> type.compare(a.type) == 0){
+                this -> val = this -> val - a.val;
+                return *this;
+            }
+            else{
+                throw "error";
+            }
         }
-        return false;
-    }
+        NumberWithUnits& NumberWithUnits::operator+= (const NumberWithUnits& a){
+            if( this -> type.compare(a.type) == 0){
+                this -> val = this -> val + a.val;
+                return *this;
+            }
+            else{
+                throw "error";
+            }
+        }
+        ostream& operator<< (ostream& os, const NumberWithUnits& a){
+            return (os<<a.val << '[' << a.type << ']');
+        }
+        istream& operator>> (istream& is, NumberWithUnits& a){
+            double input_val = 0;
+            string input_type ;
+            char c = '\0';
+            is >> input_val >> c;
+            while (c != ']'){
+                if (c != '['){
+                    input_type.insert(input_type.end(),c);
+                }
+                is >> c;
+            }
+            if (con_map.count(input_type) > 0){
+                a.val = input_val;
+                a.type = input_type;
+            }
+            else{
+                throw "wrong types";
+            }
+            return is;
+
+        }
  }
 
